@@ -14,6 +14,8 @@ main.obj: C:/ti/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/stdbool.h
 main.obj: C:/ti/TivaWare_C_Series-2.1.2.111/driverlib/interrupt.h
 main.obj: ../button.h
 main.obj: C:/ti/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/string.h
+main.obj: ../scan.h
+main.obj: ../uart.h
 
 ../main.c: 
 C:/ti/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/stdint.h: 
@@ -29,3 +31,5 @@ C:/ti/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/stdbool.h:
 C:/ti/TivaWare_C_Series-2.1.2.111/driverlib/interrupt.h: 
 ../button.h: 
 C:/ti/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/string.h: 
+../scan.h: 
+../uart.h: 
