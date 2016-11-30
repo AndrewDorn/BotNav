@@ -10,8 +10,11 @@
 #include <math.h>
 #include<stdio.h>
 #include"lcd.h"
+#include"uart.h"
 
 #define M_PI 3.14159265358979323846
+#define CMS_FROM_SENSOR_TO_SERVO 4
+#define CHAOS 5
 #define BIT0		0x01
 #define BIT1		0x02
 #define BIT2		0x04
@@ -211,25 +214,23 @@ uint32_t GetReading(char channel) {
 }
 
 struct distance_info * perform_scan() {
-	struct distance_info distances[180];
+	static struct distance_info distances[180];
 	while (1) {
 		send_pulse();
-		uint32_t tempVal;
-		uint32_t digVal = GetReading('b');	//Get value from register
+		uint32_t digVal = 0;	//Get value from register
 
 		int j;
 		for (j = 0; j < 3; j++) {
 			timer_waitMillis(10);
-			tempVal = GetReading('b');	//Get value from register
-			if (tempVal < digVal)
-				digVal = tempVal;
+			digVal += GetReading('b');
 		}
+		digVal /= j;
 
-		int IRDistance = pow(digVal, -1.41) * 639685;//Equation for converting digital value back to analog for bot 10
+		int IRDistance = (pow(digVal, -1.41) * 639685) + CMS_FROM_SENSOR_TO_SERVO;//Equation for converting digital value back to analog for bot 10
 		while (flag != 2)
 			;	//Check to see if the ping is complete
-		double pingDistance = (((double) duration) / 16000000.0) * 34000.0
-				/ 2.0;
+		double pingDistance = ((((double) duration) / 16000000.0) * 34000.0
+				/ 2.0) + CMS_FROM_SENSOR_TO_SERVO;
 		flag = 0;
 
 		int arrayPos = position;
@@ -245,4 +246,47 @@ struct distance_info * perform_scan() {
 
 	move_servo(0);
 	return distances;
+}
+
+void check_for_objects(struct distance_info * distances) {
+	uart_sendString("Degree\tDistance\tSize\n\r");
+	int inObject = 0;
+	int startPosition;
+	int i;
+	for(i = 0;i < 180;i++)
+	{
+		if(inObject == 1)
+		{
+			if(abs(distances[i].IR_cm - distances[i - 1].IR_cm) > CHAOS)//not in same object
+			{
+				double objectRadians = (i - startPosition) * M_PI / 180.0;
+				double cosine = cos(objectRadians);
+				double size = pow(pow(distances[startPosition].sonar_cm, 2) + pow(distances[i - 1].sonar_cm, 2) - 2 * distances[startPosition].sonar_cm * distances[i - 1].sonar_cm * cosine, .5);
+				if(size > 1)
+				{
+					char message[100];
+					sprintf(message, "%d\t%fcm.\t%fcm.\n\r", (i + startPosition - 1) / 2, distances[(i + startPosition - 1) / 2].sonar_cm + (size / 2), size);
+					uart_sendString(message);
+				}
+				inObject = 0;
+				i--;
+			}
+		}
+		else if(distances[i].IR_cm < 80)//In new object
+		{
+			startPosition = i;
+			inObject = 1;
+		}
+	}
+
+	if(inObject == 1)
+	{
+		i = 179;
+		double objectRadians = (i - startPosition) * M_PI / 180.0;
+		double cosine = cos(objectRadians);
+		double size = pow(pow(distances[startPosition].sonar_cm, 2) + pow(distances[i - 1].sonar_cm, 2) - 2 * distances[startPosition].sonar_cm * distances[i - 1].sonar_cm * cosine, .5);
+		char message[100];
+		sprintf(message, "%d\t%fcm.\t%fcm.\n\r", (i + startPosition - 1) / 2, distances[(i + startPosition - 1) / 2].sonar_cm + (size / 2), size);
+		uart_sendString(message);
+	}
 }

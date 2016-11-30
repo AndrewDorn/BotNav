@@ -18,5 +18,5 @@ struct distance_info
 
 void scanner_init();
 struct distance_info * perform_scan();
-
+void check_for_objects(struct distance_info * distances);
 #endif /* SCAN_H_ */
